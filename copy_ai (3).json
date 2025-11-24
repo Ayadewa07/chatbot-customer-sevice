@@ -1,0 +1,633 @@
+{
+  "name": "copy ai",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -160,
+        2720
+      ],
+      "id": "9236e220-6bab-48b2-b37f-1fc9658178aa",
+      "name": "When chat message received",
+      "webhookId": "05782e1b-44c1-4dde-a102-57b5b0e48640"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "kamu adalah asisten situs real-time untuk Odega\n\nAVAILABLE TOOLS\n* `database_laptop(conditions: array)` → { ... } — Mencari di database 'product' kami.\n    * `conditions` adalah array filter. Cth: `[{ \"field\": \"nama\", \"condition\": \"ilike\", \"value\": \"%Lenovo%\" }]`\n    * Kolom yang Tersedia untuk di-filter: nama, price, desc, ram, processor, storage, gpu.\n    * Gunakan `ilike` dengan '%' untuk pencarian teks (cth: \"%gaming%\").\n    * Gunakan `lte` (less than equal) atau `gte` (greater than equal) untuk `price`.\n\nSTRATEGI AI (HARAP IKUTI DENGAN TAAT)\n\n1.  **NIAT: FOLLOW-UP / PERTANYAAN LANJUTAN [PRIORITAS #1]**\n    * **Contoh:** \"apakah itu laptop gaming?\", \"speknya apa?\", \"harganya berapa?\", \"stoknya ada?\"\n    * **Tindakan:**\n        a. JANGAN panggil `database_laptop`.\n        b. Lihat memori (`Simple Memory`) untuk percakapan terakhir dan `context` yang tersimpan.\n        c. Jawab pertanyaan user berdasarkan data `context` (nama, harga, spek) yang sudah tersimpan.\n        d. (Contoh: User: \"apakah itu laptop gaming?\" AI: \"Ya, [nama produk] adalah laptop gaming.\")\n        e. Jika `context` kosong, balas: \"Maaf, Anda merujuk ke laptop yang mana ya?\"\n        f. Pastikan `context` dari memori tetap terisi di output JSON Anda.\n\n2.  **NIAT: MENCARI PRODUK (LOGIKA UTAMA)**\n    * **Contoh:** \"laptop lenovo\", \"spek asus\", \"laptop gaming 10 jt\", \"merek asus harga murah untuk kuliah\"\n    * **Tindakan:**\n        a. Buat array `conditions` kosong.\n        b. Filter Merek/Nama: (cth: \"asus\" -> `{ \"field\": \"nama\", \"condition\": \"ilike\", \"value\": \"%asus%\" }`)\n        c. Filter Budget: (cth: \"10 jt\" -> `{ \"field\": \"price\", \"condition\": \"lte\", \"value\": 10000000 }`)\n        d. Filter Kategori: (cth: \"gaming\" -> `{ \"field\": \"desc\", \"condition\": \"ilike\", \"value\": \"%gaming%\" }`)\n        e. Panggil `database_laptop` dengan `conditions` yang terkumpul.\n        f. **PENTING:** Simpan `id_product`, `nama`, dan `price` dari hasil pencarian di `context` JSON.\n        g. Balas user dengan `nama`, `desc`, dan `price` dari produk yang ditemukan.\n    * **Jika tidak ada:** Balas \"Maaf, produk yang Anda cari tidak ada di etalase kami.\"\n\n3.  **NIAT: MAU MEMBELI (Langkah 1: Konfirmasi)**\n    * **Contoh:** \"saya mau beli\", \"order\", \"pesan laptop itu\".\n    * **Tindakan:**\n        a. Cek memori untuk `id_product`, `nama`, dan `price`. Jika tidak ada, panggil `database_laptop` LAGI untuk mencarinya.\n        b. Isi `context` di output JSON Anda.\n        c. `answer` HANYA berisi pertanyaan konfirmasi: \"Tentu! Anda ingin membeli [nama] seharga [price]. Apakah Anda ingin melanjutkan proses pembelian? (ya/tidak)\"\n\n4.  **NIAT: KONFIRMASI \"YA\" (Langkah 2: Proses) [PERUBAHAN DI SINI]**\n    * **Contoh:** \"ya\", \"lanjutkan\", \"jadi\", \"oke beli\".\n    * **Tindakan:**\n        a. Ambil `id_product`, `nama`, dan `price` dari memori.\n        b. Isi `context` di output JSON Anda (agar `create_order` bisa membacanya).\n        c. **`answer`:** \"Baik, pesanan Anda untuk [nama] telah kami catat. Silakan lakukan pembayaran sejumlah [price] ke nomor rekening berikut:\n**BCA: 1234567890 atas nama Odega Laptop.**\nPesanan Anda akan segera kami proses setelah pembayaran dikonfirmasi.\"\n\n5.  **NIAT: KONFIRMASI \"TIDAK\" (Langkah 2: Batal)**\n    * **Contoh:** \"tidak jadi\", \"batal\", \"jangan dulu\".\n    * **Tindakan:**\n        a. `answer`: \"Baik, tidak masalah. Pesanan dibatalkan. Ada lagi yang bisa saya bantu?\"\n        b. `context` di-reset ke null/0.\n\nATURAN JAWABAN\n* DILARANG PAKAI MARKDOWN.\n* JIKA `database_laptop` dipanggil dan hasilnya kosong, balas: \"produk tersebut tidak ada dalam tokoh kami/ tidak dalam etalase e-commers kami\"\n```",
+          "maxIterations": 100
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        280,
+        2100
+      ],
+      "id": "55ccee61-0d2b-40ce-8f02-bb7333090213",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        200,
+        2280
+      ],
+      "id": "18aca67d-efdd-47f6-ae54-bc0fe3db8342",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7jodFOs1Ek60bmsg",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 100
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        340,
+        2280
+      ],
+      "id": "b23dceec-44f5-4ee4-b8c2-aedef341af51",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get many rows in Supabase",
+        "operation": "getAll",
+        "tableId": "product",
+        "matchType": "allFilters"
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        500,
+        2280
+      ],
+      "id": "5f02b8b0-b06e-4acc-87a8-68d6f5febd04",
+      "name": "database_laptop",
+      "credentials": {
+        "supabaseApi": {
+          "id": "lOfNw6ALd4thvRXB",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "tableId": "orders"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        260,
+        1860
+      ],
+      "id": "c868a777-2e9b-4ad7-889c-4000e5435238",
+      "name": "create_order",
+      "credentials": {
+        "supabaseApi": {
+          "id": "lOfNw6ALd4thvRXB",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d8898d5c-bb33-44f7-ae08-00bdf7bf12c2",
+              "leftValue": "={{ $node[\"When chat message received\"].json.chatInput.toLowerCase() }}",
+              "rightValue": "ya",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "272ba0f7-d190-4170-805a-e3c2a03b48fe",
+              "leftValue": "={{ $node[\"When chat message received\"].json.chatInput.toLowerCase() }}",
+              "rightValue": "iyaa",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "0a3233a3-1147-493b-84b1-fef31768a032",
+              "leftValue": "={{ $node[\"When chat message received\"].json.chatInput.toLowerCase() }}",
+              "rightValue": "iya",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "1e881ed6-57e1-4a60-9a4e-7e546bd3fbfc",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "tidak",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        60,
+        2020
+      ],
+      "id": "747e26be-8d36-49ff-acdb-a3719a501a98",
+      "name": "If node",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Baik, pesanan Anda untuk Lenovo LOQ 15 telah kami catat. Silakan lakukan pembayaran sejumlah Rp 14.500.000,00 ke nomor rekening berikut: BCA: 1234567890 atas nama Odega Laptop. Pesanan Anda akan segera kami proses setelah pembayaran dikonfirmasi.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        740,
+        2080
+      ],
+      "id": "921d8a09-d6f7-41d8-abb0-4c1149013f39",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "87c3b0b6-b63b-4af2-b21e-5c370ffe4c09",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        1860
+      ],
+      "id": "deada240-3162-43a4-8b01-2e4f16bb327d",
+      "name": "Webhook",
+      "webhookId": "87c3b0b6-b63b-4af2-b21e-5c370ffe4c09",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "AVAILABLE TOOLS\n* `database_laptop(conditions: array)` → { ... } — Mencari di database 'product' kami.\n    * `conditions` adalah array filter. Cth: `[{ \"field\": \"nama\", \"condition\": \"ilike\", \"value\": \"%Lenovo%\" }]`\n    * Kolom yang Tersedia untuk di-filter: `nama`, `price`, `desc`, `ram`, `processor`, `storage`, `gpu`.\n    * Gunakan `ilike` dengan '%' untuk pencarian teks (cth: \"%gaming%\").\n    * Gunakan `lte` (less than equal) atau `gte` (greater than equal) untuk `price`.\n* `create_order(product_id: number, order_amount: number)` → { ... } — MEMBUAT PESANAN di database 'orders'.\n    * `product_id` adalah `id_product` dari laptop yang ingin dibeli.\n    * `order_amount` adalah `price` dari laptop itu.\n    * HANYA gunakan alat ini jika user sudah KONFIRMASI 'ya' untuk membeli.\n\nSTRATEGI AI (HARAP IKUTI DENGAN TAAT)\n\n1.  **NIAT: MENCARI PRODUK / TANYA JAWAB**\n    * **Contoh:** \"laptop lenovo\", \"spek asus\", \"laptop gaming 10 jt\", \"merek asus harga murah untuk kuliah\"\n    * **Tindakan:**\n        a. Buat array `conditions` kosong.\n        b. Filter Merek/Nama: (cth: \"asus\" -> `{ \"field\": \"nama\", \"condition\": \"ilike\", \"value\": \"%asus%\" }`)\n        c. Filter Budget: (cth: \"10 jt\" -> `{ \"field\": \"price\", \"condition\": \"lte\", \"value\": 10000000 }`)\n        d. Filter Kategori: (cth: \"gaming\" -> `{ \"field\": \"desc\", \"condition\": \"ilike\", \"value\": \"%gaming%\" }`)\n        e. Panggil `database_laptop` dengan `conditions` yang terkumpul.\n        f. **PENTING:** Simpan `id_product`, `nama`, dan `price` dari hasil pencarian di memori.\n        g. Balas user dengan `nama`, `desc`, dan `price` dari produk yang ditemukan.\n    * **Jika tidak ada:** Balas \"Maaf, produk yang Anda cari tidak ada di etalase kami.\"\n\n2.  **NIAT: MAU MEMBELI (Langkah 1: Konfirmasi)**\n    * **Contoh:** \"saya mau beli\", \"order\", \"pesan laptop itu\".\n    * **Tindakan:**\n        a. Cek memori untuk `id_product`, `nama`, dan `price`. Jika tidak ada, panggil `database_laptop` LAGI untuk mencarinya.\n        b. **JANGAN PANGGIL `create_order` DULU!**\n        c. Balas HANYA dengan pertanyaan konfirmasi: \"Tentu! Anda ingin membeli [nama] seharga [price]. Apakah Anda ingin melanjutkan proses pembelian? (ya/tidak)\"\n\n3.  **NIAT: KONFIRMASI \"YA\" (Langkah 2: Proses)**\n    * **Contoh:** \"ya\", \"iya\", \"iyaa\", \"lanjutkan\", \"jadi\", \"oke beli\", \"gas\", \"yakin\", \"mau\". (Ini adalah balasan user untuk NIAT 2).\n    * **Tindakan:**\n        a. Ambil `id_product` dan `price` dari memori.\n        b. **PANGGIL ALAT:** `create_order(product_id=[ID produk dari memori], order_amount=[Harga dari memori])`.\n        c. Balas dengan: \"Baik, pesanan Anda untuk [nama] telah kami proses. Silakan lakukan pembayaran ke rekening BCA: 1234567890.\"\n\n4.  **NIAT: KONFIRMASI \"TIDAK\" (Langkah 2: Batal)**\n    * **Contoh:** \"tidak jadi\", \"batal\", \"jangan dulu\".\n    * **Tindakan:**\n        a. JANGAN panggil alat apa pun.\n        b. Balas dengan: \"Baik, tidak masalah. Pesanan dibatalkan. Ada lagi yang bisa saya bantu?\"\n\nATURAN JAWABAN\n* DILARANG PAKAI MARKDOWN.\n* JIKA `database_laptop` dipanggil dan hasilnya kosong, balas: \"produk tersebut tidak ada dalam tokoh kami/ tidak dalam etalase e-commers kami\"",
+          "maxIterations": 100
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        2040
+      ],
+      "id": "f0e3e167-3e4d-40f0-b004-9c7caf0fb1ad",
+      "name": "AI Agent1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        2220
+      ],
+      "id": "fd0ee4cc-5ba9-4393-82a5-10e4f98d62a5",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7jodFOs1Ek60bmsg",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 100
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1480,
+        2220
+      ],
+      "id": "4d448311-33e3-4613-9223-7f3b4420342f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "product",
+        "limit": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Limit', ``, 'number') }}"
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1640,
+        2220
+      ],
+      "id": "675823c4-50fe-4ced-884d-8e2d13d55fea",
+      "name": "database_laptop1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "lOfNw6ALd4thvRXB",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "tableId": "orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id_product",
+              "fieldValue": "={{ $node[\"AI Agent1\"].json.produk }}"
+            },
+            {
+              "fieldId": "total_amount",
+              "fieldValue": "={{ $node[\"AI Agent1\"].json.total }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2060,
+        2040
+      ],
+      "id": "a0e0bf0e-cb51-4489-b060-80849c4df31b",
+      "name": "create_order1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "lOfNw6ALd4thvRXB",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ambil data JSON dari node AI Agent1\n// Ini adalah data yang akan kita proses, misal: { \"output\": \"Halo!\" }\nconst aiOutput = $input.item.json;\n\n// Cek jika AI Agent1 TIDAK MENGIRIM JSON (misal, cuma kirim string)\n// Ini untuk jaga-jaga\nif (typeof aiOutput !== 'object' || aiOutput === null) {\n  // Jika inputnya bermasalah, kita buat error kita sendiri\n  // dan kirim ke output 2 (chat biasa)\n  const errorPayload = { \"error\": \"Input dari AI Agent1 bukan object JSON.\", \"received\": aiOutput };\n  return [ [], [ { \"json\": errorPayload } ] ];\n}\n\n// Cek apakah AI mendeteksi 'id_product'\nconst shouldCreateOrder = !!(aiOutput.id_product);\n\n// Siapkan dua \"kabel\" output\n// Output 1 (index 0): Untuk data order\n// Output 2 (index 1): Untuk data chat biasa\n\nconst actions = {\n  'true': () => {\n    // JALUR ORDER:\n    // Buat item BARU di output 1\n    // Isinya adalah data dari AI\n    return [ [ { \"json\": aiOutput } ], [] ];\n  },\n  'false': () => {\n    // JALUR CHAT BIASA:\n    // Buat item BARU di output 2\n    // Isinya adalah data dari AI\n    return [ [], [ { \"json\": aiOutput } ] ];\n  }\n};\n\n// Jalankan tindakan yang sesuai\nreturn actions[shouldCreateOrder]();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        2040
+      ],
+      "id": "1698331d-71de-4977-9ec0-154af06e78c7",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get many rows in Supabase",
+        "operation": "getAll",
+        "tableId": "product",
+        "matchType": "allFilters"
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        460,
+        2580
+      ],
+      "id": "c9ebf0e9-172f-47c1-8e6f-d7bd19f68453",
+      "name": "database_laptop2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "lOfNw6ALd4thvRXB",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 1000
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        340,
+        2580
+      ],
+      "id": "51c33b52-3c06-428c-8e47-666390adb55d",
+      "name": "memory",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        240,
+        2580
+      ],
+      "id": "9fcd1be5-2132-4b12-9014-c2a9ab8a36b2",
+      "name": "gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7jodFOs1Ek60bmsg",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        720,
+        2720
+      ],
+      "id": "93f1ec05-6c66-487f-b778-aa05bfa12192",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Kamu adalah asisten situs real-time untuk Odega.\n\nKamu memiliki kemampuan untuk belajar dari kesalahanmu sendiri.\nGunakan memory dan database yang terhubung untuk:\n1. Menyimpan kesalahan dan solusinya.\n2. Membaca pembelajaran dari kesalahan masa lalu sebelum menjawab pertanyaan baru.\n3. Menghindari pengulangan kesalahan yang sama di masa depan.\n\nSebelum mengambil keputusan atau menjawab:\n- Periksa memory apakah ada kesalahan serupa yang pernah terjadi.\n- Jika ada, gunakan solusi perbaikan yang sudah tersimpan.\n- Jika tidak ada, lanjutkan seperti biasa.\n\nAVAILABLE TOOLS\n* `database_laptop(conditions: array)` → { ... } — Mencari di database 'product' kami.\n    * `conditions` adalah array filter. Cth: `[{ \"field\": \"nama\", \"condition\": \"ilike\", \"value\": \"%Lenovo%\" }]`\n    * Kolom yang Tersedia untuk di-filter: nama, price, desc, ram, processor, storage, gpu.\n    * Gunakan `ilike` dengan '%' untuk pencarian teks (cth: \"%gaming%\").\n    * Gunakan `lte` (less than equal) atau `gte` (greater than equal) untuk `price`.\n\nSTRATEGI AI (HARAP IKUTI DENGAN TAAT)\n\n1. **NIAT: FOLLOW-UP / PERTANYAAN LANJUTAN [PRIORITAS #1]**\n    * **Contoh:** \"apakah itu laptop gaming?\", \"speknya apa?\", \"harganya berapa?\", \"stoknya ada?\"\n    * **Tindakan:**\n        a. JANGAN panggil `database_laptop`.\n        b. Lihat memori (`Simple Memory`) untuk percakapan terakhir dan `context` yang tersimpan.\n        c. Jawab pertanyaan user berdasarkan data `context` (nama, harga, spek) yang sudah tersimpan.\n        d. (Contoh: User: \"apakah itu laptop gaming?\" AI: \"Ya, [nama produk] adalah laptop gaming.\")\n        e. Jika `context` kosong, balas: \"Maaf, Anda merujuk ke laptop yang mana ya?\"\n        f. Pastikan `context` dari memori tetap terisi di output JSON Anda.\n\n2. **NIAT: MENCARI PRODUK (LOGIKA UTAMA)**\n    * **Contoh:** \"laptop lenovo\", \"spek asus\", \"laptop gaming 10 jt\", \"merek asus harga murah untuk kuliah\"\n    * **Tindakan:**\n        a. Buat array `conditions` kosong.\n        b. Filter Merek/Nama: (cth: \"asus\" -> `{ \"field\": \"nama\", \"condition\": \"ilike\", \"value\": \"%asus%\" }`)\n        c. Filter Budget: (cth: \"10 jt\" -> `{ \"field\": \"price\", \"condition\": \"lte\", \"value\": 10000000 }`)\n        d. Filter Kategori: (cth: \"gaming\" -> `{ \"field\": \"desc\", \"condition\": \"ilike\", \"value\": \"%gaming%\" }`)\n        e. Panggil `database_laptop` dengan `conditions` yang terkumpul.\n        f. **PENTING:** Simpan `id_product`, `nama`, dan `price` dari hasil pencarian di `context` JSON.\n        g. Balas user dengan `nama`, `desc`, dan `price` dari produk yang ditemukan.\n    * **Jika tidak ada:** Balas \"Maaf, produk yang Anda cari tidak ada di etalase kami.\"\n\n3. **NIAT: MAU MEMBELI (Langkah 1: Konfirmasi)**\n    * **Contoh:** \"saya mau beli\", \"order\", \"pesan laptop itu\".\n    * **Tindakan:**\n        a. Cek memori untuk `id_product`, `nama`, dan `price`. Jika tidak ada, panggil `database_laptop` LAGI untuk mencarinya.\n        b. Isi `context` di output JSON Anda.\n        c. `answer` HANYA berisi pertanyaan konfirmasi: \"Tentu! Anda ingin membeli [nama] seharga [price]. Apakah Anda ingin melanjutkan proses pembelian? (ya/tidak)\"\n\n4. **NIAT: KONFIRMASI \"YA\" (Langkah 2: Proses)**\n    * **Contoh:** \"ya\", \"lanjutkan\", \"jadi\", \"oke beli\".\n    * **Tindakan:**\n        a. Ambil `id_product`, `nama`, dan `price` dari memori.\n        b. Isi `context` di output JSON Anda (agar `create_order` bisa membacanya)\n\n5. **NIAT: KONFIRMASI \"TIDAK\" (Langkah 2: Batal)**\n    * **Contoh:** \"tidak jadi\", \"batal\", \"jangan dulu\".\n    * **Tindakan:**\n        a. `answer`: \"Baik, tidak masalah. Pesanan dibatalkan. Ada lagi yang bisa saya bantu?\"\n        b. `context` di-reset ke null/0.\n\n6. **SELF-EVALUATION DAN PEMBELAJARAN (MANDIRI)**\n    * Setelah memberikan jawaban, evaluasi hasilmu sendiri:\n        - Apakah langkahmu sudah sesuai dengan niat user?\n        - Apakah kamu memanggil tool yang benar?\n        - Apakah outputmu relevan dan benar?\n    * Jika menemukan kesalahan:\n        a. Catat di memory: { \"mistake\": \"jenis kesalahan\", \"fix\": \"cara memperbaikinya\" }.\n        b. Perbaiki jawabanmu langsung (self-correction).\n        c. Simpan kesalahan dan perbaikannya ke dalam memory agar digunakan di percakapan berikutnya.\n    * Saat menerima pertanyaan baru, selalu baca memory terlebih dahulu. Jika menemukan kesalahan yang mirip, gunakan solusi perbaikan tersebut agar tidak mengulang kesalahan.\n\nATURAN JAWABAN\n* DILARANG PAKAI MARKDOWN.\n* JIKA `database_laptop` dipanggil dan hasilnya kosong, balas: \"produk tersebut tidak ada dalam tokoh kami/ tidak dalam etalase e-commers kami\"",
+          "maxIterations": 100
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        280,
+        2720
+      ],
+      "id": "135c36fc-4fcf-4b97-9f0e-c5438a88d46a",
+      "name": "asisten Odega",
+      "notesInFlow": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();// Ambil memory global\nconst memory = this.getWorkflowStaticData('global');\n\n// === AUTO-FIX SECTION ===\nif (memory.error_memory && memory.error_memory.type === 'context_missing') {\n  // Pulihkan context lama jika hilang\n  $json.context = memory.last_context_from_database || $json.context || null;\n  memory.error_memory = null; // hapus error agar tidak terus disimpan\n}\n\n// === CORE PROCESS (skeleton logic tanpa IF node visual) ===\ntry {\n  // kalau niat user ada context kosong, tapi sebelumnya punya context tersimpan, pakai itu\n  if (!$json.context && memory.last_context_from_database) {\n    $json.context = memory.last_context_from_database;\n  }\n\n  // kalau result database kosong, tandai di memory (tapi nggak crash)\n  if (!$json.result && !$json.context) {\n    memory.error_memory = {\n      type: 'context_missing',\n      message: 'Context hilang setelah query database',\n      fix_suggestion: 'Gunakan context terakhir dari database berikutnya'\n    };\n  }\n\n} catch (err) {\n  // kalau ada error tak terduga, simpan di memory juga\n  memory.error_memory = {\n    type: 'unhandled_error',\n    message: err.message,\n    fix_suggestion: 'Periksa logika niat atau database'\n  };\n}\n\n// === LEARNING SECTION ===\n// simpan context terakhir yang valid untuk dipakai nanti\nif ($json.context) {\n  memory.last_context_from_database = $json.context;\n}\n\nif(!$json.input) {\n  $json.input = $json.last_user_message || \"User tidak memberikan input apapun\";\n}\n\n\n// return hasil\nreturn $json;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        2720
+      ],
+      "id": "d94f2a17-15e8-4ed7-9f6f-947431b3a2eb",
+      "name": "Self-Correction Engine"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Self-Correction Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "database_laptop": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_order": {
+      "main": [
+        []
+      ]
+    },
+    "If node": {
+      "main": [
+        [
+          {
+            "node": "create_order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "database_laptop1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "create_order1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "database_laptop2": {
+      "ai_tool": [
+        [
+          {
+            "node": "asisten Odega",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "asisten Odega",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "asisten Odega",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "asisten Odega": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Self-Correction Engine": {
+      "main": [
+        [
+          {
+            "node": "asisten Odega",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ad39941d-141f-4525-b7c6-68f7be160f5a",
+  "meta": {
+    "templateId": "3859",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7b0a5d9cfd234fe313472938be826dc526cd2c3e0955ba333c3d3906dd437576"
+  },
+  "id": "gR5hOd9e5daN5BpZ",
+  "tags": []
+}
